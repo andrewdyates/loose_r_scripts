@@ -4,6 +4,11 @@ library(illuminaHumanv2.db)
 illuminaHumanv2()
 library(IlluminaHumanMethylation27k.db)
 IlluminaHumanMethylation27k()
+library(lumi)
+library(annotate)
+library(lumiHumanAll.db)
+library(GOstats)
+
 
 load("DCOR.R")
 #mRNA.expr <- read.table("gse15745_nov2012_experiments/gse15745_aligned_matrices_nov2/mRNA_correct_aligned.tab", header=TRUE, sep="\t", row.names=1);
@@ -18,13 +23,22 @@ BC0<-DCOR[bcbest.0.row,bcbest.0.col]
 BC1<-DCOR[bcbest.1.row,bcbest.1.col]
 BC2<-DCOR[bcbest.2.row,bcbest.2.col]
 BC3<-DCOR[bcbest.3.row,bcbest.3.col]
+source("density_merge_bicliques/revised_dec3/BCBig_t.65_o.80_f.16_areamerge.R")
+BCBig<-DCOR[bcbig.0.row,bcbig.0.col]
 
-all.row<-c(bcbest.0.row,bcbest.1.row,bcbest.2.row,bcbest.3.row)
-all.col<-c(bcbest.0.col,bcbest.1.col,bcbest.2.col,bcbest.3.col)
+all.row<-unique(c(bcbest.0.row,bcbest.1.row,bcbest.2.row,bcbest.3.row))
+all.col<-unique(c(bcbest.0.col,bcbest.1.col,bcbest.2.col,bcbest.3.col))
 BC.all <- DCOR[all.row, all.col]
 
+overlaps <- function(A, B) {
+  r<-sum(!is.na(match(rownames(A),rownames(A))))
+  c<-sum(!is.na(match(colnames(B),colnames(B))))
+  r*c
+  # how to best represent overlaps?
+  }
+
 # TODO: Compare nearest mRNA to DNA methyl
-# TODO: Gene ontology report
+# TODO: Bicliques Overlaps report
 
 report <- function(BC, i=0) {
 
@@ -67,4 +81,36 @@ report(BC0,0)
 report(BC1,1)
 report(BC2,2)
 report(BC3,3)
+report(BCBig,"big")
 report(BC.all,"all")
+
+
+# ENRICHMENT
+enrich <- function(probeIDs, type="mRNA", pv=0.01, fdr=0.2, ont="CC") {
+  # ont in ('CC', 'BP', 'MF')
+  if (type == "mRNA") {
+    sigLL <- unlist(mget(probeIDs, illuminaHumanv2ENTREZID, ifnotfound = NA))
+  } else { # DNA methylation
+    sigLL <- unlist(mget(probeIDs, IlluminaHumanMethylation27kENTREZID, ifnotfound = NA))
+  }
+  sigLL <- unique(as.character(sigLL[!is.na(sigLL)]))
+  params <- new("GOHyperGParams",
+    geneIds= sigLL,
+    annotation="lumiHumanAll.db",
+    ontology=ont,
+    pvalueCutoff=pv,
+    conditional=FALSE,
+    testDirection="over")
+  
+  hgOver <- hyperGTest(params)
+  print(hgOver)
+  ## Get the p-values of the test
+  gGhyp.pv <- pvalues(hgOver)
+  ## Adjust p-values for multiple test (FDR)
+  gGhyp.fdr <- p.adjust(gGhyp.pv, 'fdr')
+  sigGO.ID <- names(gGhyp.fdr[gGhyp.fdr < fdr])
+  sigGO.Term <- getGOTerm(sigGO.ID)[[ont]]
+
+  # save as table of:
+  # sigGO.ID, sigGO.Term, pv, fdr
+}

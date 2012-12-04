@@ -329,7 +329,7 @@ IlluminaHumanMethylation27k()
 sigLL <- unlist(mget(colnames(bic.dcor), illuminaHumanv2ENTREZID, ifnotfound = NA))
 sigLL <- unique(as.character(sigLL[!is.na(sigLL)]))
 
-# BP
+# CC
 # $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 params <- new("GOHyperGParams",
   geneIds= sigLL,
