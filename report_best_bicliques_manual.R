@@ -41,7 +41,7 @@ report <- function(BC, i=0) {
   h.row <- hist(rowMeans(BC), main=title, xlab="mean dCOR"); dev.off(); print(title); print(h.row)
 
   write.table(BC, file=paste0("bc",i,".dcor.tab"), quote=FALSE)
-  pdf(paste0("heatmap_bc",i,".pdf"), width=30, height=30)
+  pdf(paste0("heatmap_bc",i,".pdf"), width=30, height=40)
   heatmap(as.matrix(BC), main=paste0("BC",i)); dev.off()
 
   bic.mrna.genes <- unlist(mget(colnames(BC), illuminaHumanv2SYMBOL, ifnotfound = NA))
