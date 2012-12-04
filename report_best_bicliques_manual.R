@@ -4,6 +4,7 @@ library(illuminaHumanv2.db)
 illuminaHumanv2()
 library(IlluminaHumanMethylation27k.db)
 IlluminaHumanMethylation27k()
+library(ggplot2)
 
 #mRNA.expr <- read.table("gse15745_nov2012_experiments/gse15745_aligned_matrices_nov2/mRNA_correct_aligned.tab", header=TRUE, sep="\t", row.names=1);
 #meth.expr <- read.table("gse15745_nov2012_experiments/gse15745_aligned_matrices_nov2/Methyl_correct_aligned.tab", header=TRUE, sep="\t", row.names=1);
@@ -18,11 +19,18 @@ BC1<-DCOR[bcbest.1.row,bcbest.1.col]
 BC2<-DCOR[bcbest.2.row,bcbest.2.col]
 BC3<-DCOR[bcbest.3.row,bcbest.3.col]
 
+all.row<-c(bcbest.0.row,bcbest.1.row,bcbest.2.row,bcbest.3.row)
+all.col<-c(bcbest.0.col,bcbest.1.col,bcbest.2.col,bcbest.3.col)
+BC.all <- DCOR[all.row, all.col]
+write.table(BC.all, file="BC.all.concat.tab", quote=FALSE)
+
 
 # TODO: Compare nearest mRNA to DNA methyl
 # TODO: Gene ontology report
 
 report <- function(BC, i=0) {
+
+  heatmap_cols <- rev(colorRampPalette(brewer.pal(8,"RdYlBu"))(50))
   sink(paste0("bc",i,"_report.txt"))
   print(paste0("Biclique ", i))
   print(dim(BC))
@@ -41,8 +49,9 @@ report <- function(BC, i=0) {
   h.row <- hist(rowMeans(BC), main=title, xlab="mean dCOR"); dev.off(); print(title); print(h.row)
 
   write.table(BC, file=paste0("bc",i,".dcor.tab"), quote=FALSE)
-  pdf(paste0("heatmap_bc",i,".pdf"), width=30, height=40)
-  heatmap(as.matrix(BC), main=paste0("BC",i)); dev.off()
+  pdf(paste0("heatmap_bc",i,".pdf"), width=dim(BC)[2]/5, height=dim(BC)[1]/5)
+  heatmap(as.matrix(BC), main=paste0("BC",i), col=heatmap_cols, ylab="CpG", xlab="mRNA");
+  dev.off()
 
   bic.mrna.genes <- unlist(mget(colnames(BC), illuminaHumanv2SYMBOL, ifnotfound = NA))
   bic.meth.genes <- unlist(mget(rownames(BC), IlluminaHumanMethylation27kSYMBOL, ifnotfound = NA))
@@ -56,3 +65,4 @@ report(BC0,0)
 report(BC1,1)
 report(BC2,2)
 report(BC3,3)
+
