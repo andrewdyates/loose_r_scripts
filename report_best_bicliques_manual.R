@@ -8,6 +8,8 @@ library(lumi)
 library(annotate)
 library(lumiHumanAll.db)
 library(GOstats)
+library("gplots")
+setwd("/nfs/01/osu6683")
 
 
 load("DCOR.R")
@@ -42,27 +44,37 @@ overlaps <- function(A, B) {
 
 report <- function(BC, i=0) {
 
-  heatmap_cols <- rev(colorRampPalette(brewer.pal(8,"RdYlBu"))(50))
+  # from 0.08 to 0.80 in 0.01 steps
+  heatmap_breaks <- seq(0.08,0.8,0.01)
+  heatmap_cols <- rev(colorRampPalette(brewer.pal(8,"RdYlBu"))(length(heatmap_breaks)-1))
   sink(paste0("bc",i,"_report.txt"))
   print(paste0("Biclique ", i))
   print(dim(BC))
   print(mean(unlist(BC)))
 
-  title<-paste0("Hist of all items, BC", i)
-  pdf(paste0("hist_bc",i,"_all.pdf"), width=10, height=8)
+  title<-paste0("dCOR Hist of all items, BC", i)
+  png(paste0("hist_bc",i,"_all.png"), width=10*72, height=8*72)
   h.all <- hist(unlist(BC), main=title, xlab="dCOR"); dev.off(); print(title); print(h.all)
   
-  title<-paste0("Hist of column means, BC", i)
-  pdf(paste0("hist_bc",i,"_col.pdf"), width=10, height=8)
+  title<-paste0("dCOR Hist of column means, BC", i)
+  png(paste0("hist_bc",i,"_col.png"), width=10*72, height=8*72)
   h.col <- hist(colMeans(BC), main=title, xlab="mean dCOR"); dev.off(); print(title); print(h.col)
   
-  title<-paste0("Hist of row items, BC", i)
-  pdf(paste0("hist_bc",i,"_row.pdf"), width=10, height=8)
+  title<-paste0("dCOR Hist of row items, BC", i)
+  png(paste0("hist_bc",i,"_row.png"), width=10*72, height=8*72)
   h.row <- hist(rowMeans(BC), main=title, xlab="mean dCOR"); dev.off(); print(title); print(h.row)
 
   write.table(BC, file=paste0("bc",i,".dcor.tab"), quote=FALSE)
-  png(paste0("img_bc",i,".png"), width=dim(BC)[1]*2+1000, height=dim(BC)[1]*2+1000)
-  heatmap(as.matrix(BC), main=paste0("BC",i), col=heatmap_cols, ylab="CpG", xlab="mRNA");
+  png(paste0("heatmap_bc",i,".png"), width=dim(BC)[1]*2+1000, height=dim(BC)[1]*2+1000)
+  my.hclust<-function(x, method="average", ...)
+    hclust(x, method=method, ...)
+  my.dist<- function(x, ...)
+    as.dist(1-cor(t(x), method="pearson")) + dist(x)
+  heatmap.2(as.matrix(BC), main=paste0("BC",i),
+    col=heatmap_cols, ylab="CpG", xlab="mRNA", symm=FALSE, breaks=heatmap_breaks,
+    key=TRUE, symkey=FALSE, trace="none",
+    distfun=my.dist,
+    hclustfun=my.hclust);
   dev.off()
   png(paste0("img_bc",i,".png"), width=dim(BC)[2]*2+600, height=dim(BC)[1]*2+600)
   image(as.matrix(BC), main=paste0("BC",i), col=heatmap_cols);
