@@ -61,8 +61,7 @@ report <- function(BC, i=0) {
   h.row <- hist(rowMeans(BC), main=title, xlab="mean dCOR"); dev.off(); print(title); print(h.row)
 
   write.table(BC, file=paste0("bc",i,".dcor.tab"), quote=FALSE)
-  #pdf(paste0("heatmap_bc",i,".pdf"), width=dim(BC)[2]/10, height=dim(BC)[1]/10)
-  png(paste0("img_bc",i,".png"), width=dim(BC)[1]*10+600, height=dim(BC)[1]*10+600)
+  png(paste0("img_bc",i,".png"), width=dim(BC)[1]*2+1000, height=dim(BC)[1]*2+1000)
   heatmap(as.matrix(BC), main=paste0("BC",i), col=heatmap_cols, ylab="CpG", xlab="mRNA");
   dev.off()
   png(paste0("img_bc",i,".png"), width=dim(BC)[2]*2+600, height=dim(BC)[1]*2+600)
