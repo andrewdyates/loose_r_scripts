@@ -11,7 +11,6 @@ library(GOstats)
 library("gplots")
 setwd("/nfs/01/osu6683")
 
-
 load("DCOR.R")
 #mRNA.expr <- read.table("gse15745_nov2012_experiments/gse15745_aligned_matrices_nov2/mRNA_correct_aligned.tab", header=TRUE, sep="\t", row.names=1);
 #meth.expr <- read.table("gse15745_nov2012_experiments/gse15745_aligned_matrices_nov2/Methyl_correct_aligned.tab", header=TRUE, sep="\t", row.names=1);
@@ -31,6 +30,8 @@ BCBig<-DCOR[bcbig.0.row,bcbig.0.col]
 all.row<-unique(c(bcbest.0.row,bcbest.1.row,bcbest.2.row,bcbest.3.row))
 all.col<-unique(c(bcbest.0.col,bcbest.1.col,bcbest.2.col,bcbest.3.col))
 BC.all <- DCOR[all.row, all.col]
+BCBig.fix<-BCBig[rowMeans(BCBig)>.3,colMeans(BCBig)>.3]
+
 
 overlaps <- function(A, B) {
   r<-sum(!is.na(match(rownames(A),rownames(A))))
@@ -41,6 +42,36 @@ overlaps <- function(A, B) {
 
 # TODO: Compare nearest mRNA to DNA methyl
 # TODO: Bicliques Overlaps report
+
+# ENRICHMENT
+enrich <- function(probeIDs, type="mRNA", pvt=0.01, ont="CC") {
+  # ont in ('CC', 'BP', 'MF')
+  if (type == "mRNA" || type == "mrna") {
+    sigLL <- unlist(mget(probeIDs, illuminaHumanv2ENTREZID, ifnotfound = NA))
+  } else { # DNA methylation
+    sigLL <- unlist(mget(probeIDs, IlluminaHumanMethylation27kENTREZID, ifnotfound = NA))
+  }
+  sigLL <- unique(as.character(sigLL[!is.na(sigLL)]))
+  params <- new("GOHyperGParams",
+    geneIds= sigLL,
+    annotation="lumiHumanAll.db",
+    ontology=ont,
+    pvalueCutoff=pvt,
+    conditional=FALSE,
+    testDirection="over")
+  
+  hgOver <- hyperGTest(params)
+  print(hgOver)
+  ## Get the p-values of the test
+  pv <- pvalues(hgOver)
+  ## Adjust p-values for multiple test (FDR)
+  fdr <- p.adjust(pv, 'fdr')
+  ID <- names(fdr)
+  Term <- getGOTerm(ID)[[ont]]
+
+  # return table of: sigGO.ID, sigGO.Term, pv, fdr
+  data.frame(Term[, pv, fdr)
+}
 
 report <- function(BC, i=0) {
 
@@ -85,6 +116,9 @@ report <- function(BC, i=0) {
   write.table(bic.mrna.genes, file=paste0("bc",i,"_mRNA_syms.tab"), quote=FALSE)
   write.table(bic.meth.genes, file=paste0("bc",i,"_meth_syms.tab"), quote=FALSE)
 
+  # Gene ontology.
+  
+
   sink()
 }
 
@@ -96,32 +130,3 @@ report(BCBig,"big")
 report(BC.all,"all")
 
 
-# ENRICHMENT
-enrich <- function(probeIDs, type="mRNA", pv=0.01, fdr=0.2, ont="CC") {
-  # ont in ('CC', 'BP', 'MF')
-  if (type == "mRNA") {
-    sigLL <- unlist(mget(probeIDs, illuminaHumanv2ENTREZID, ifnotfound = NA))
-  } else { # DNA methylation
-    sigLL <- unlist(mget(probeIDs, IlluminaHumanMethylation27kENTREZID, ifnotfound = NA))
-  }
-  sigLL <- unique(as.character(sigLL[!is.na(sigLL)]))
-  params <- new("GOHyperGParams",
-    geneIds= sigLL,
-    annotation="lumiHumanAll.db",
-    ontology=ont,
-    pvalueCutoff=pv,
-    conditional=FALSE,
-    testDirection="over")
-  
-  hgOver <- hyperGTest(params)
-  print(hgOver)
-  ## Get the p-values of the test
-  gGhyp.pv <- pvalues(hgOver)
-  ## Adjust p-values for multiple test (FDR)
-  gGhyp.fdr <- p.adjust(gGhyp.pv, 'fdr')
-  sigGO.ID <- names(gGhyp.fdr[gGhyp.fdr < fdr])
-  sigGO.Term <- getGOTerm(sigGO.ID)[[ont]]
-
-  # save as table of:
-  # sigGO.ID, sigGO.Term, pv, fdr
-}
