@@ -37,6 +37,16 @@ int.hist <- function(x,ylab="Frequency",...) {
   barplot(table(factor(x,levels=min(x):max(x))),space=0,xaxt="n",ylab=ylab,...);axis(1)
 }
 
+r1<-c(0,1,1,1,1,1,1,4)
+r2<-c(1,0,1,2,2,2,2,4)
+r3<-c(1,1,0,1,2,3,2,4)
+r4<-c(1,2,1,0,2,2,2,4)
+r5<-c(1,2,2,2,0,1,2,4)
+r6<-c(1,2,3,2,1,0,1,4)
+r7<-c(1,2,2,2,2,1,0,4)
+r8<-c(4,4,4,4,4,4,4,0)
+glyph.dist<-matrix(c(r1,r2,r3,r4,r5,r6,r7,r8), 8,8)
+
 setwd("dec18_biclq_class")
 report.cls <- function(BC, i=0) {
 
@@ -67,8 +77,8 @@ report.cls <- function(BC, i=0) {
   png(paste0("clsmap_bc",i,".png"), width=dim(BC)[1]*2+1000, height=dim(BC)[1]*2+1000)
   my.hclust<-function(x, method="average", ...)
     hclust(x, method=method, ...)
-  my.dist<- function(x, ...)
-    dist(x)
+  f.glyph.dist<- function(x, ...)
+    glyph.dist[x]
   heatmap.2(as.matrix(BC), main=paste0("Class BC",i),
     col=heatmap_cols, ylab="CpG", xlab="mRNA", symm=FALSE, breaks=0:7-0.5,
     key=TRUE, symkey=FALSE, trace="none",
