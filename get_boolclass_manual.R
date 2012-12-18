@@ -14,6 +14,8 @@ library(modeest)
 library("gplots")
 
 setwd("/nfs/01/osu6683")
+
+
 source("density_merge_bicliques/bicliques_t.45_o.55_f.16_areamerge.R")
 BC0<-DCOR[bcbest.0.row,bcbest.0.col]
 source("density_merge_bicliques/revised_dec3/BCBig_t.65_o.80_f.16_areamerge.R")
@@ -29,6 +31,16 @@ colnames(CLASSES)<-rownames(mRNA.expr)
 
 BC0.cls<-CLASSES[bcbest.0.row,bcbest.0.col]
 BCBig.cls<-CLASSES[bcbig.0.row,bcbig.0.col]
+
+
+# LOCAL COPY LOAD
+# ---------------
+setwd("/Users/z/Dropbox/biostat/dec18_biclique")
+BC0.cls <- read.table("bc0.cls.tab", header=TRUE, sep=" ", row.names=1);
+BC0 <- read.table("bc0.dcor.tab", header=TRUE, sep=" ", row.names=1);
+BCBig.cls <- read.table("bcBig.cls.tab", header=TRUE, sep=" ", row.names=1);
+BCBig <- read.table("bcbig.dcor.tab", header=TRUE, sep=" ", row.names=1);
+# ---------------
 
 # calc mode
 # mlv(as.matrix(BC0.cls))
@@ -50,7 +62,10 @@ glyph.dist<-matrix(c(r1,r2,r3,r4,r5,r6,r7,r8), 8,8)
 setwd("dec18_biclq_class")
 report.cls <- function(BC, i=0) {
 
-  heatmap_cols <- brewer.pal(7,"Accent")
+  #heatmap_cols <- brewer.pal(7,"Accent")
+  heatmap_cols <- c("#000000", "#a00d42", "#d7424c", "#eb6532", "#40a185", "#2688bf", "#5b51a5")
+  #heatmap_cols <- c("#000000", "#3f62f6", "#009426", "#a5a300", "#cd4f00", "#dc1a00", "#b12ac1")
+
   sink(paste0("bc",i,"_cls_report.txt"))
   print(paste0("Biclique CLS ", i))
   print(dim(BC))
@@ -73,16 +88,17 @@ report.cls <- function(BC, i=0) {
   h.col <- hist(unlist(modes.col), breaks=0:7-0.5)
   dev.off(); print(title); print(h.col)
   
-  write.table(BC, file=paste0("bc",i,".cls.tab"), quote=FALSE)
+  write.table(BC, file=paste0("bc",i,".cls.tab"), quote=FALSE, sep="\t")
   png(paste0("clsmap_bc",i,".png"), width=dim(BC)[1]*2+1000, height=dim(BC)[1]*2+1000)
   my.hclust<-function(x, method="average", ...)
     hclust(x, method=method, ...)
   f.glyph.dist<- function(x, ...)
-    glyph.dist[x]
+    dist(x)
+#    glyph.dist[x+1]
   heatmap.2(as.matrix(BC), main=paste0("Class BC",i),
     col=heatmap_cols, ylab="CpG", xlab="mRNA", symm=FALSE, breaks=0:7-0.5,
     key=TRUE, symkey=FALSE, trace="none",
-    distfun=my.dist,
+    distfun=f.glyph.dist,
     hclustfun=my.hclust);
   dev.off()
   png(paste0("img_bc_cls",i,".png"), width=dim(BC)[2]*2+600, height=dim(BC)[1]*2+600)
