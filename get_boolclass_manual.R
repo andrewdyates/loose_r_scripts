@@ -49,6 +49,10 @@ int.hist <- function(x,ylab="Frequency",...) {
   barplot(table(factor(x,levels=min(x):max(x))),space=0,xaxt="n",ylab=ylab,...);axis(1)
 }
 
+
+# COMPUTE DISTANCE MATRIX
+# ====================
+# define glyph pairwise distance
 r1<-c(0,1,1,1,1,1,1,4)
 r2<-c(1,0,1,2,2,2,2,4)
 r3<-c(1,1,0,1,2,3,2,4)
@@ -57,14 +61,49 @@ r5<-c(1,2,2,2,0,1,2,4)
 r6<-c(1,2,3,2,1,0,1,4)
 r7<-c(1,2,2,2,2,1,0,4)
 r8<-c(4,4,4,4,4,4,4,0)
-glyph.dist<-matrix(c(r1,r2,r3,r4,r5,r6,r7,r8), 8,8)
+dist.glyph <- matrix(c(r1,r2,r3,r4,r5,r6,r7,r8), 8,8)
+
+
+# Compute distance between two vectors of glyphs
+glyph.f <- function(A,B) {
+  # glyphs are enumerated from zero already
+  sqrt(sum(dist.glyph[as.numeric(A*8+(B+1))]**2))
+}
+
+# Compute distance matrix (this is rather slow, but faster than other options
+gen.glyph.dist.m <- function(BC) {
+  D <- matrix(0,nrow(BC),nrow(BC))
+  for (i in 1:nrow(BC)) {
+    for (j in (i+1):nrow(BC)) {
+      if (j <= nrow(BC)) {
+        D[j,i] <- glyph.f(BC[i,], BC[j,])
+      }
+    }
+  }
+  as.dist(D)
+}
+
+# Re-enumerate glyph symbols
+#   1,2,3 to 0,1,2
+#   0 to 3
+
+renumerate <- function(BC) {
+  BC[BC==0] <- -1
+  BC[BC>=1 & BC<=3] <- BC[BC>=1 & BC<=3] -1
+  BC[BC==-1] <- 3
+  BC
+}
+
 
 setwd("dec18_biclq_class")
 report.cls <- function(BC, i=0) {
 
   #heatmap_cols <- brewer.pal(7,"Accent")
-  heatmap_cols <- c("#000000", "#a00d42", "#d7424c", "#eb6532", "#40a185", "#2688bf", "#5b51a5")
-  #heatmap_cols <- c("#000000", "#3f62f6", "#009426", "#a5a300", "#cd4f00", "#dc1a00", "#b12ac1")
+  # divergent colors
+  # heatmap_cols <- c("#000000", "#a00d42", "#d7424c", "#eb6532", "#40a185", "#2688bf", "#5b51a5")
+  heatmap_cols <- c("#a00d42", "#d7424c", "#eb6532", "#000000", "#40a185", "#2688bf", "#5b51a5")
+  # categorical, equal intensity
+  #heatmap_cols <- c("#3f62f6", "#009426", "#a5a300", "#000000", "#cd4f00", "#dc1a00", "#b12ac1")
 
   sink(paste0("bc",i,"_cls_report.txt"))
   print(paste0("Biclique CLS ", i))
@@ -90,15 +129,15 @@ report.cls <- function(BC, i=0) {
   
   write.table(BC, file=paste0("bc",i,".cls.tab"), quote=FALSE, sep="\t")
   png(paste0("clsmap_bc",i,".png"), width=dim(BC)[1]*2+1000, height=dim(BC)[1]*2+1000)
+
   my.hclust<-function(x, method="average", ...)
     hclust(x, method=method, ...)
-  f.glyph.dist<- function(x, ...)
+  my.dist<- function(x, ...)
     dist(x)
-#    glyph.dist[x+1]
-  heatmap.2(as.matrix(BC), main=paste0("Class BC",i),
+  heatmap.2(as.matrix(BC),
     col=heatmap_cols, ylab="CpG", xlab="mRNA", symm=FALSE, breaks=0:7-0.5,
     key=TRUE, symkey=FALSE, trace="none",
-    distfun=f.glyph.dist,
+    distfun=my.dist,
     hclustfun=my.hclust);
   dev.off()
   png(paste0("img_bc_cls",i,".png"), width=dim(BC)[2]*2+600, height=dim(BC)[1]*2+600)
@@ -112,3 +151,17 @@ report.cls <- function(BC, i=0) {
 
 report.cls(BC0.cls,0)
 report.cls(BCBig.cls,"Big")
+
+
+# excerpt from custom distance matrix heatmap
+  # Precompute dendrograms and row/column ordering
+  BC.D <- gen.glyph.dist.m(BC)
+  BC.Dt <- gen.glyph.dist.m(t(BC))
+  Rhclust<-hclust(BC.D, method="average")
+  Chclust<-hclust(BC.Dt, method="average")
+
+  heatmap.2(as.matrix(BC), #main=paste0("Class BC",i),
+    col=heatmap_cols, ylab="CpG", xlab="mRNA", symm=FALSE, breaks=0:7-0.5,
+    key=TRUE, symkey=FALSE, trace="none",
+    Rowv=as.dendrogram(Rhclust), Colv=as.dendrogram(Chclust)
+    );
