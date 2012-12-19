@@ -94,6 +94,58 @@ renumerate <- function(BC) {
   BC
 }
 
+# 
+
+# Get indices from hierarchical clustering
+D.DCOR.r <- as.dist(1-cor(t(BC0), method="pearson")) + dist(BC0)
+D.DCOR.c <- as.dist(1-cor(BC0, method="pearson")) + dist(t(BC0))
+D.cls.r <- dist(renumerate(BC0.cls))
+D.cls.c <- dist(t(renumerate(BC0.cls)))
+Rowv <- rowMeans(BC0, na.rm = TRUE)
+Colv <- colMeans(BC0, na.rm = TRUE)
+
+# how to combine D.DCOR and D.cls? norm between 0 and 1?
+Rhclust <- as.dendrogram(hclust(D.DCOR.r*3+D.cls.r, method="average"))
+Rhclust <- reorder(Rhclust, Rowv)
+Chclust <- as.dendrogram(hclust(D.DCOR.c*3+D.cls.c, method="average"))
+Chclust <- reorder(Chclust, Colv)
+
+# To get final row and column row orders:
+# order.dendrogram(Rhclust)
+# order.dendrogram(Chclust)
+
+# clusters glyphs by dCOR
+heatmap.2(as.matrix(renumerate(BC0.cls)),
+  col=heatmap_cols, ylab="CpG", xlab="mRNA", symm=FALSE, breaks=0:7-0.5,
+  key=TRUE, symkey=FALSE, trace="none",
+  Rowv=Rhclust, Colv=Chclust
+);
+
+# from 0.08 to 0.80 in 0.01 steps
+heatmap_breaks_dcor <- seq(0.08,0.8,0.01)
+heatmap_cols_dcor <- rev(colorRampPalette(brewer.pal(8,"RdYlBu"))(length(heatmap_breaks_dcor)-1))
+# cluster dCOR by dCOR
+heatmap.2(as.matrix(BC0), 
+  col=heatmap_cols_dcor, ylab="CpG", xlab="mRNA", symm=FALSE, breaks=heatmap_breaks_dcor,
+  key=TRUE, symkey=FALSE, trace="none",
+  Rowv=Rhclust, Colv=Chclust
+);
+
+# There is some special ordering in the dendrogram here...
+  my.hclust<-function(x, method="average", ...)
+    hclust(x, method=method, ...)
+  my.dist<- function(x, ...)
+    as.dist(1-cor(t(x), method="pearson")) + dist(x)
+  heatmap.2(as.matrix(BC0), 
+    col=heatmap_cols_dcor, ylab="CpG", xlab="mRNA", symm=FALSE, breaks=heatmap_breaks_dcor,
+    key=TRUE, symkey=FALSE, trace="none",
+    distfun=my.dist,
+    hclustfun=my.hclust);
+
+
+hr<-hclust(dist(BC0.cls.r), method="average")
+hr$order
+
 
 setwd("dec18_biclq_class")
 report.cls <- function(BC, i=0) {
